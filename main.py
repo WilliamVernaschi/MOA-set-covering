@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from math import inf
 from functools import cmp_to_key
+import random
+from math import log2
+from math import log as ln
 
 @dataclass
 class Column:
@@ -25,10 +28,14 @@ def parseInput(inp : list[list[str]]) -> Matrix:
     num_rows = int(inp[0][1])
     num_columns = int(inp[1][1])
 
+    if inp[0][0].lower() != "linhas" \
+            or not (inp[2][0].lower() == "densidade" or inp[2][0].lower() == "dados"):
+        raise ValueError("Invalid input format")
+
     columns = [Column(int(column[0])-1, # idx
             [int(row)-1 for row in column[2:]], # lines
-            float(column[1])) # cost
-            for column in inp[3:]]
+            int(100*float(column[1]))) # cost
+               for column in inp[3:]]
 
     return Matrix(data=columns, num_columns=num_columns, num_rows=num_rows)
 
@@ -61,19 +68,33 @@ def remove_useless_columns(solution : list[int], matrix : Matrix) -> None:
 def get_total_weight(solution : list[int], matrix : Matrix) -> float:
     return sum(matrix.data[column_idx].cost for column_idx in solution)
 
+greedy_options = [
+        lambda cj, kj : cj,
+        lambda cj, kj : cj/kj,
+        lambda cj, kj : cj/log2(kj) if log2(kj) != 0 else 1e9,
+        lambda cj, kj : cj/(kj*log2(kj)) if (kj*log2(kj)) != 0 else 1e9,
+        lambda cj, kj : cj/(kj*ln(kj)) if kj*ln(kj) != 0 else 1e9,
+        lambda cj, kj : cj/(kj*kj),
+        lambda cj, kj : cj**(1/2)/(kj*kj)]
+
+# sorts one of the greedy functions and uses it
+def random_greedy_cost(weight : float, num_rows_covered_by_column : int) -> float:
+    return random.choice(greedy_options)(weight, num_rows_covered_by_column)
+
 def greedy_cost(weight : float, num_rows_covered_by_column : int) -> float:
     return weight/num_rows_covered_by_column
 
 
 # returns a pair of the total cost and the chosen columns
 def min_set_cover(matrix : Matrix) -> tuple[float, list[int]]:
-    S = []
-    numCovered = 0
+    S = [] # solution set
+    numCovered = 0 # number of rows already covered
     row_covered = [False for i in range(matrix.num_rows)]
     # row_covered[i] := has row `i` been covered by some column?
 
     while numCovered < matrix.num_rows:
-        best_pair = (inf, -1) # pair of cost choosing a column and its index
+        best_pair = (inf, -1) # pair of cost of choosing a column and its index
+                              # initially, no column is chosen.
 
         for column in matrix.data:
             num_rows_covered_by_column = sum(1 for row in column.lines if not row_covered[row])
@@ -84,6 +105,7 @@ def min_set_cover(matrix : Matrix) -> tuple[float, list[int]]:
         chosenColumn = best_pair[1]
 
         assert chosenColumn != -1 # some column must be chosen
+                                  # if this assertion fails, there is no viable solution.
 
         for row in matrix.data[chosenColumn].lines:
             if row_covered[row]:
@@ -95,7 +117,7 @@ def min_set_cover(matrix : Matrix) -> tuple[float, list[int]]:
 
     remove_useless_columns(S, matrix) # removes useless columns from S
 
-    return (get_total_weight(S, matrix), sorted(S))
+    return (get_total_weight(S, matrix)/100, sorted(S))
 
 if __name__ == "__main__":
     import sys
@@ -108,4 +130,7 @@ if __name__ == "__main__":
 
     inp = read_input(input_file)
     matrix = parseInput(inp)
-    print(min_set_cover(matrix))
+    total_cost, chosen_columns = min_set_cover(matrix)
+
+    print(f"Custo total: {total_cost}")
+    print(f"Colunas escolhidas: {chosen_columns}")
