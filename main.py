@@ -141,7 +141,7 @@ def min_set_cover(matrix : Matrix) -> tuple[float, list[int]]:
     return (get_total_weight(S, matrix), sorted(S))
 
 def min_set_cover_search(matrix : Matrix, solution : list[int]) -> tuple[float, list[int]]:
-    ρ1 = random.uniform(0.1, 0.4)
+    ρ1 = random.uniform(0.1, 0.8)
     ρ2 = random.uniform(1.1, 2)
 
     D = ceil(ρ1 * len(solution))
@@ -247,10 +247,10 @@ if __name__ == "__main__":
 
     best_solution : tuple[float, list[int]] = (inf, [])
 
-    for _ in range(5):
-        total_cost, chosen_columns = min_set_cover_constructive2(matrix)
+    for _ in range(10):
+        total_cost, chosen_columns = min_set_cover(matrix)
         print(_)
-        for __ in range(5000):
+        for __ in range(10000):
 
             current_solution = min_set_cover_search(matrix, chosen_columns)
 
@@ -258,7 +258,7 @@ if __name__ == "__main__":
                 best_solution = deepcopy(current_solution)
                 print(best_solution)
 
-            chosen_columns = deepcopy(best_solution[1])
+            chosen_columns = deepcopy(current_solution[1])
 
     print(f"Custo: {best_solution[0]}")
     print(f"Colunas: {sorted([c+1 for c in best_solution[1]])}")
